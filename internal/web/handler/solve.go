@@ -26,8 +26,8 @@ func Solve() gin.HandlerFunc {
 			return
 		}
 
-		if len(req.Points) < 2 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Need at least 2 points for interpolation"})
+		if len(req.Points) < 2 || len(req.Points) > 8 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Number of points must be between 2 and 8"})
 			return
 		}
 

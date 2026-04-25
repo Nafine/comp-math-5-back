@@ -24,6 +24,7 @@ func Interpolate(points []numeric.Point, xUser float64) ([]InterpolationResult, 
 		Method: "Lagrange",
 		XValue: xUser,
 		YValue: resL,
+		Table:  finiteDifferencesTable(points),
 		Curve:  curveL,
 	})
 
