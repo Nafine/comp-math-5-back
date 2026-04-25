@@ -2,85 +2,116 @@ package algo
 
 import (
 	"comp-math-5/internal/numeric"
-	"fmt"
 )
 
 type InterpolationResult struct {
 	Method string          `json:"method"`
-	XValue float64         `json:"xValue"` // Точка, введенная пользователем
-	YValue float64         `json:"yValue"` // Результат в этой точке
-	Table  [][]float64     `json:"table"`  // Таблица конечных/разделенных разностей
-	Curve  []numeric.Point `json:"curve"`  // Точки для отрисовки графика (линия)
-	Nodes  []numeric.Point `json:"nodes"`  // Исходные узлы (для точек на графике)
+	XValue float64         `json:"xValue"`
+	YValue float64         `json:"yValue"`
+	Table  [][]float64     `json:"table"`
+	Curve  []numeric.Point `json:"curve"`
 	Error  string          `json:"error,omitempty"`
 }
 
-func Interpolate(points []numeric.Point, x1, x2 float64) ([]InterpolationResult, error) {
+func Interpolate(points []numeric.Point, xUser float64) ([]InterpolationResult, error) {
 	var results []InterpolationResult
 
-	// --- Многочлен Лагранжа ---
-	resL1 := LagrangeInterpolation(points, x1)
-	results = append(results, InterpolationResult{Method: "Lagrange", XValue: x1, YValue: resL1})
+	resL := LagrangeInterpolation(points, xUser)
+	curveL := generateCurve(points, func(x float64) float64 {
+		return LagrangeInterpolation(points, x)
+	})
+	results = append(results, InterpolationResult{
+		Method: "Lagrange",
+		XValue: xUser,
+		YValue: resL,
+		Curve:  curveL,
+	})
 
-	resL2 := LagrangeInterpolation(points, x2)
-	results = append(results, InterpolationResult{Method: "Lagrange", XValue: x2, YValue: resL2})
+	tableFin := finiteDifferencesTable(points)
 
-	// --- Многочлен Ньютона с разделенными разностями ---
-	resND1 := NewtonDividedForwardInterpolation(points, x1)
-	results = append(results, InterpolationResult{Method: "Newton Forward (Divided)", XValue: x1, YValue: resND1})
+	tableDiv := dividedDifferencesTable(points)
+	resND1 := NewtonDividedForwardInterpolation(points, xUser)
+	curveND1 := generateCurve(points, func(x float64) float64 {
+		return NewtonDividedForwardInterpolation(points, x)
+	})
+	results = append(results, InterpolationResult{
+		Method: "Newton Forward (Divided Differences)",
+		XValue: xUser,
+		YValue: resND1,
+		Table:  tableDiv,
+		Curve:  curveND1,
+	})
 
-	resND2 := NewtonDividedBackwardInterpolation(points, x2)
-	results = append(results, InterpolationResult{Method: "Newton Backward (Divided)", XValue: x2, YValue: resND2})
+	resND2 := NewtonDividedBackwardInterpolation(points, xUser)
+	curveND2 := generateCurve(points, func(x float64) float64 {
+		return NewtonDividedBackwardInterpolation(points, x)
+	})
+	results = append(results, InterpolationResult{
+		Method: "Newton Backward (Divided Differences)",
+		XValue: xUser,
+		YValue: resND2,
+		Table:  tableDiv,
+		Curve:  curveND2,
+	})
 
-	// --- Многочлены Гаусса ---
-	resG1, errG1 := GaussForwardInterpolation(points, x1)
-	if errG1 != nil {
-		fmt.Printf("Gauss Forward for X1 skipped: %v\n", errG1)
-		results = append(results, InterpolationResult{Method: "Gauss Forward", XValue: x1, Error: errG1.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Gauss Forward", XValue: x1, YValue: resG1})
+	resGF1, errGF1 := GaussForwardInterpolation(points, xUser)
+	if errGF1 == nil {
+		curveGF := generateCurve(points, func(x float64) float64 {
+			v, _ := GaussForwardInterpolation(points, x)
+			return v
+		})
+		results = append(results, InterpolationResult{
+			Method: "Gauss Forward",
+			XValue: xUser,
+			YValue: resGF1,
+			Table:  tableFin,
+			Curve:  curveGF,
+		})
 	}
 
-	resG2, errG2 := GaussBackwardInterpolation(points, x2)
-	if errG2 != nil {
-		fmt.Printf("Gauss Backward for X2 skipped: %v\n", errG2)
-		results = append(results, InterpolationResult{Method: "Gauss Backward", XValue: x2, Error: errG2.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Gauss Backward", XValue: x2, YValue: resG2})
+	resGF2, errGF2 := GaussBackwardInterpolation(points, xUser)
+	if errGF2 == nil {
+		curveGF := generateCurve(points, func(x float64) float64 {
+			v, _ := GaussBackwardInterpolation(points, x)
+			return v
+		})
+		results = append(results, InterpolationResult{
+			Method: "Gauss Backward",
+			XValue: xUser,
+			YValue: resGF2,
+			Table:  tableFin,
+			Curve:  curveGF,
+		})
 	}
 
-	// --- Схема Стирлинга ---
-	resS1, errS1 := StirlingInterpolation(points, x1)
-	if errS1 != nil {
-		fmt.Printf("Stirling for X1 skipped: %v\n", errS1)
-		results = append(results, InterpolationResult{Method: "Stirling", XValue: x1, Error: errS1.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Stirling", XValue: x1, YValue: resS1})
+	resS, errS := StirlingInterpolation(points, xUser)
+	if errS == nil {
+		curveS := generateCurve(points, func(x float64) float64 {
+			v, _ := StirlingInterpolation(points, x)
+			return v
+		})
+		results = append(results, InterpolationResult{
+			Method: "Stirling",
+			XValue: xUser,
+			YValue: resS,
+			Table:  tableFin,
+			Curve:  curveS,
+		})
 	}
 
-	resS2, errS2 := StirlingInterpolation(points, x2)
-	if errS2 != nil {
-		fmt.Printf("Stirling for X2 skipped: %v\n", errS2)
-		results = append(results, InterpolationResult{Method: "Stirling", XValue: x2, Error: errS2.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Stirling", XValue: x2, YValue: resS2})
-	}
-
-	// --- Схема Бесселя ---
-	resB1, errB1 := BesselInterpolation(points, x1)
-	if errB1 != nil {
-		fmt.Printf("Bessel for X1 skipped: %v\n", errB1)
-		results = append(results, InterpolationResult{Method: "Bessel", XValue: x1, Error: errB1.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Bessel", XValue: x1, YValue: resB1})
-	}
-
-	resB2, errB2 := BesselInterpolation(points, x2)
-	if errB2 != nil {
-		fmt.Printf("Bessel for X2 skipped: %v\n", errB2)
-		results = append(results, InterpolationResult{Method: "Bessel", XValue: x2, Error: errB2.Error()})
-	} else {
-		results = append(results, InterpolationResult{Method: "Bessel", XValue: x2, YValue: resB2})
+	resB, errB := BesselInterpolation(points, xUser)
+	if errB == nil {
+		curveB := generateCurve(points, func(x float64) float64 {
+			v, _ := BesselInterpolation(points, x)
+			return v
+		})
+		results = append(results, InterpolationResult{
+			Method: "Bessel",
+			XValue: xUser,
+			YValue: resB,
+			Table:  tableFin,
+			Curve:  curveB,
+		})
 	}
 
 	return results, nil

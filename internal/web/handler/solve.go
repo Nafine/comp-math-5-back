@@ -15,8 +15,7 @@ type Point struct {
 }
 type InterpolateRequest struct {
 	Points []Point `json:"points" binding:"required,dive"`
-	X1     float64 `json:"x1" binding:"required"`
-	X2     float64 `json:"x2" binding:"required"`
+	X      float64 `json:"x" binding:"required"`
 }
 
 func Solve() gin.HandlerFunc {
@@ -40,7 +39,7 @@ func Solve() gin.HandlerFunc {
 			}
 		}
 
-		results, err := algo.Interpolate(pointsToInterpolate, req.X1, req.X2)
+		results, err := algo.Interpolate(pointsToInterpolate, req.X)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Errorf("failed to compute interpolation: %w", err).Error()})
 			return

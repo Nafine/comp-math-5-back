@@ -144,7 +144,6 @@ func NewtonDividedForwardInterpolation(points []numeric.Point, x float64) float6
 	return result
 }
 
-// NewtonDividedBackwardInterpolation - вторая формула Ньютона (с разделенными разностями).
 func NewtonDividedBackwardInterpolation(points []numeric.Point, x float64) float64 {
 	table := dividedDifferencesTable(points)
 	n := len(points)
@@ -158,9 +157,6 @@ func NewtonDividedBackwardInterpolation(points []numeric.Point, x float64) float
 	return result
 }
 
-// --- 2. Схема Стирлинга ---
-
-// calcStirlingTerm вычисляет значение произведения для t в формуле Стирлинга
 func calcStirlingTerm(t float64, k int) float64 {
 	m := k / 2
 	prod := 1.0
@@ -178,7 +174,6 @@ func calcStirlingTerm(t float64, k int) float64 {
 	return prod
 }
 
-// StirlingInterpolation вычисляет значение функции с помощью схемы Стирлинга.
 func StirlingInterpolation(points []numeric.Point, x float64) (float64, error) {
 	n := len(points)
 	if n < 3 {
@@ -220,9 +215,6 @@ func StirlingInterpolation(points []numeric.Point, x float64) (float64, error) {
 	return result, nil
 }
 
-// --- 3. Схема Бесселя ---
-
-// calcBesselTerm вычисляет значение произведения для t в формуле Бесселя
 func calcBesselTerm(t float64, k int) float64 {
 	if k == 1 {
 		return t - 0.5
@@ -238,7 +230,6 @@ func calcBesselTerm(t float64, k int) float64 {
 	return prod
 }
 
-// BesselInterpolation вычисляет значение функции с помощью схемы Бесселя.
 func BesselInterpolation(points []numeric.Point, x float64) (float64, error) {
 	n := len(points)
 	if n < 4 {
@@ -295,7 +286,6 @@ func factorial(k int) float64 {
 	return res
 }
 
-// generateCurve создает массив точек для визуализации функции на интервале
 func generateCurve(points []numeric.Point, f func(float64) float64) []numeric.Point {
 	if len(points) < 2 {
 		return nil
@@ -303,7 +293,7 @@ func generateCurve(points []numeric.Point, f func(float64) float64) []numeric.Po
 
 	minX := points[0].X
 	maxX := points[len(points)-1].X
-	step := (maxX - minX) / 100 // 100 точек для плавности
+	step := (maxX - minX) / 100
 
 	var curve []numeric.Point
 	for i := 0; i <= 100; i++ {
