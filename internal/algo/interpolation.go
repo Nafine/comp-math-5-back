@@ -3,9 +3,11 @@ package algo
 import (
 	"comp-math-5/internal/numeric"
 	"fmt"
+	"math"
 )
 
-// LagrangeInterpolation вычисляет значение функции в точке x с помощью многочлена Лагранжа.
+const epsilon = 1e-9
+
 func LagrangeInterpolation(points []numeric.Point, x float64) float64 {
 	n := len(points)
 	var result float64
@@ -22,7 +24,6 @@ func LagrangeInterpolation(points []numeric.Point, x float64) float64 {
 	return result
 }
 
-// finiteDifferencesTable строит таблицу конечных разностей.
 func finiteDifferencesTable(points []numeric.Point) [][]float64 {
 	n := len(points)
 	table := make([][]float64, n)
@@ -39,7 +40,6 @@ func finiteDifferencesTable(points []numeric.Point) [][]float64 {
 	return table
 }
 
-// GaussForwardInterpolation вычисляет значение функции в точке x с помощью первой интерполяционной формулы Гаусса.
 func GaussForwardInterpolation(points []numeric.Point, x float64) (float64, error) {
 	n := len(points)
 	if n < 2 {
@@ -47,13 +47,14 @@ func GaussForwardInterpolation(points []numeric.Point, x float64) (float64, erro
 	}
 
 	h := points[1].X - points[0].X
+
 	for i := 1; i < n-1; i++ {
-		if (points[i+1].X - points[i].X) != h {
-			return 0, fmt.Errorf("точки должны быть равноотстоящими для формул Гаусса")
+		step := points[i+1].X - points[i].X
+		if math.Abs(step-h) > epsilon {
+			return 0, fmt.Errorf("точки должны быть равноотстоящими")
 		}
 	}
 
-	// Находим центральный узел (или ближайший к x, если n четное)
 	midIndex := (n - 1) / 2
 	x0 := points[midIndex].X
 	t := (x - x0) / h
@@ -64,18 +65,18 @@ func GaussForwardInterpolation(points []numeric.Point, x float64) (float64, erro
 
 	tProd := 1.0
 	for k := 1; k < n; k++ {
-		if k%2 != 0 { // Нечетные разности
-			tProd *= (t - float64(k/2))
-			result += tProd / factorial(k) * table[midIndex-(k/2)][k]
-		} else { // Четные разности
-			tProd *= (t + float64(k/2-1))
-			result += tProd / factorial(k) * table[midIndex-k/2][k]
+		if k%2 != 0 {
+			tProd *= t + float64(k/2)
+		} else {
+			tProd *= t - float64(k/2)
 		}
+
+		rowIndex := midIndex - k/2
+		result += (tProd / factorial(k)) * table[rowIndex][k]
 	}
 	return result, nil
 }
 
-// GaussBackwardInterpolation вычисляет значение функции в точке x с помощью второй интерполяционной формулы Гаусса.
 func GaussBackwardInterpolation(points []numeric.Point, x float64) (float64, error) {
 	n := len(points)
 	if n < 2 {
@@ -83,13 +84,14 @@ func GaussBackwardInterpolation(points []numeric.Point, x float64) (float64, err
 	}
 
 	h := points[1].X - points[0].X
+
 	for i := 1; i < n-1; i++ {
-		if (points[i+1].X - points[i].X) != h {
+		step := points[i+1].X - points[i].X
+		if math.Abs(step-h) > epsilon {
 			return 0, fmt.Errorf("точки должны быть равноотстоящими для формул Гаусса")
 		}
 	}
 
-	// Находим центральный узел (или ближайший к x, если n четное)
 	midIndex := (n - 1) / 2
 	x0 := points[midIndex].X
 	t := (x - x0) / h
@@ -100,20 +102,23 @@ func GaussBackwardInterpolation(points []numeric.Point, x float64) (float64, err
 
 	tProd := 1.0
 	for k := 1; k < n; k++ {
-		if k%2 != 0 { // Нечетные разности
-			tProd *= (t + float64(k/2))
-			result += tProd / factorial(k) * table[midIndex-(k/2)][k]
-		} else { // Четные разности
-			tProd *= (t - float64(k/2-1))
-			result += tProd / factorial(k) * table[midIndex-k/2][k]
+		if k%2 != 0 {
+			tProd *= t - float64(k/2)
+		} else {
+			tProd *= t + float64(k/2)
 		}
+		rowIndex := midIndex - (k+1)/2
+
+		if rowIndex < 0 || rowIndex >= len(table) || k >= len(table[rowIndex]) {
+			break
+		}
+
+		result += (tProd / factorial(k)) * table[rowIndex][k]
 	}
+
 	return result, nil
 }
 
-// --- 1. Многочлен Ньютона с разделенными разностями ---
-
-// dividedDifferencesTable строит таблицу разделенных разностей.
 func dividedDifferencesTable(points []numeric.Point) [][]float64 {
 	n := len(points)
 	table := make([][]float64, n)
@@ -130,7 +135,6 @@ func dividedDifferencesTable(points []numeric.Point) [][]float64 {
 	return table
 }
 
-// NewtonDividedForwardInterpolation - первая формула Ньютона (с разделенными разностями).
 func NewtonDividedForwardInterpolation(points []numeric.Point, x float64) float64 {
 	table := dividedDifferencesTable(points)
 	n := len(points)
@@ -160,12 +164,12 @@ func NewtonDividedBackwardInterpolation(points []numeric.Point, x float64) float
 func calcStirlingTerm(t float64, k int) float64 {
 	m := k / 2
 	prod := 1.0
-	if k%2 != 0 { // Нечетная степень
+	if k%2 != 0 {
 		prod = t
 		for i := 1; i <= m; i++ {
 			prod *= t*t - float64(i*i)
 		}
-	} else { // Четная степень
+	} else {
 		prod = t * t
 		for i := 1; i < m; i++ {
 			prod *= t*t - float64(i*i)
@@ -181,9 +185,11 @@ func StirlingInterpolation(points []numeric.Point, x float64) (float64, error) {
 	}
 
 	h := points[1].X - points[0].X
+
 	for i := 1; i < n-1; i++ {
-		if (points[i+1].X - points[i].X) != h {
-			return 0, fmt.Errorf("точки должны быть равноотстоящими для схемы Стирлинга")
+		step := points[i+1].X - points[i].X
+		if math.Abs(step-h) > epsilon {
+			return 0, fmt.Errorf("точки должны быть равноотстоящими")
 		}
 	}
 
@@ -197,7 +203,6 @@ func StirlingInterpolation(points []numeric.Point, x float64) (float64, error) {
 	for k := 1; k < n; k++ {
 		term := calcStirlingTerm(t, k)
 		if k%2 != 0 {
-			// Нечетные разности: берем среднее арифметическое двух центральных
 			idx1 := midIndex - k/2
 			idx2 := midIndex - k/2 - 1
 			if idx1 >= 0 && idx2 >= 0 && idx1 < len(table) && k < len(table[idx1]) {
@@ -205,7 +210,6 @@ func StirlingInterpolation(points []numeric.Point, x float64) (float64, error) {
 				result += (term / factorial(k)) * avgDiff
 			}
 		} else {
-			// Четные разности: берем одну центральную
 			idx := midIndex - k/2
 			if idx >= 0 && idx < len(table) && k < len(table[idx]) {
 				result += (term / factorial(k)) * table[idx][k]
@@ -237,9 +241,11 @@ func BesselInterpolation(points []numeric.Point, x float64) (float64, error) {
 	}
 
 	h := points[1].X - points[0].X
+
 	for i := 1; i < n-1; i++ {
-		if (points[i+1].X - points[i].X) != h {
-			return 0, fmt.Errorf("точки должны быть равноотстоящими для схемы Бесселя")
+		step := points[i+1].X - points[i].X
+		if math.Abs(step-h) > epsilon {
+			return 0, fmt.Errorf("точки должны быть равноотстоящими")
 		}
 	}
 
@@ -258,14 +264,12 @@ func BesselInterpolation(points []numeric.Point, x float64) (float64, error) {
 	for k := 1; k < n; k++ {
 		term := calcBesselTerm(t, k)
 		if k%2 != 0 {
-			// Нечетные разности: берем одну разность
 			m := (k - 1) / 2
 			idx := midIndex - m
 			if idx >= 0 && idx < len(table) && k < len(table[idx]) {
 				result += (term / factorial(k)) * table[idx][k]
 			}
 		} else {
-			// Четные разности: берем среднее арифметическое
 			m := k / 2
 			idx1 := midIndex - m
 			idx2 := midIndex - m + 1
