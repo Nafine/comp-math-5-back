@@ -26,13 +26,19 @@ func Solve() gin.HandlerFunc {
 			return
 		}
 
-		if len(req.Points) < 2 || len(req.Points) > 8 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Number of points must be between 2 and 8"})
+		if len(req.Points) < 2 || len(req.Points) > 20 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Number of points must be between 2 and 20"})
 			return
 		}
 
+		seen := make(map[float64]struct{}, len(req.Points))
 		pointsToInterpolate := make([]numeric.Point, len(req.Points))
 		for i, p := range req.Points {
+			if _, ok := seen[*p.X]; ok {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Points must be unique by x: duplicate x = %v", *p.X)})
+				return
+			}
+			seen[*p.X] = struct{}{}
 			pointsToInterpolate[i] = numeric.Point{
 				X: *p.X,
 				Y: *p.Y,
