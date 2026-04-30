@@ -86,7 +86,7 @@ func Interpolate(points []numeric.Point, xUser float64) ([]InterpolationResult, 
 	}
 
 	resS, errS := StirlingInterpolation(points, xUser)
-	if errS == nil {
+	if errS == nil && len(points)%2 == 1 {
 		curveS := generateCurve(points, func(x float64) float64 {
 			v, _ := StirlingInterpolation(points, x)
 			return v
@@ -101,7 +101,7 @@ func Interpolate(points []numeric.Point, xUser float64) ([]InterpolationResult, 
 	}
 
 	resB, errB := BesselInterpolation(points, xUser)
-	if errB == nil {
+	if errB == nil && len(points)%2 == 0 {
 		curveB := generateCurve(points, func(x float64) float64 {
 			v, _ := BesselInterpolation(points, x)
 			return v
