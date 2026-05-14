@@ -92,7 +92,7 @@ func GaussBackwardInterpolation(points []numeric.Point, x float64) (float64, err
 		}
 	}
 
-	midIndex := (n - 1) / 2
+	midIndex := (n) / 2
 	x0 := points[midIndex].X
 	t := (x - x0) / h
 
